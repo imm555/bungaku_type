@@ -326,7 +326,7 @@
       timeTakenElement.textContent = `Time: ${elapsedTime}`;
 
       // Twitter（X）共有リンクの設定
-      const tweetText = encodeURIComponent(`Typing Time: ${elapsedTime}`);
+      const tweetText = encodeURIComponent(`文学タイピング（β） Typing Time: ${elapsedTime}`);
       const tweetUrl = encodeURIComponent(window.location.href);
       const twitterLink = `https://twitter.com/intent/tweet?text=${tweetText}&url=${tweetUrl}`;
       shareButton.href = twitterLink;
