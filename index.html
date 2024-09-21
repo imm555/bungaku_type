@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>文学タイピング（β）</title>
+  <style>
+    /* 全体のレイアウトをフレックスボックスで管理 */
+    body {
+      font-family: 'HannariMincho-Regular', sans-serif;
+      background-color: #ffffff; /* 背景を白に変更 */
+      margin: 0;
+      height: 100vh; /* ビューポート全体の高さを確保 */
+      display: flex;
+      flex-direction: column;
+      justify-content: center; /* 縦方向の中央揃え */
+      align-items: center; /* 横方向の中央揃え */
+      position: relative; /* 子要素の絶対配置を可能に */
+    }
+
+    /* ストップウォッチのスタイル */
+    #stopwatch {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      color: #333333;
+    }
+
+    /* タイトルと作者情報を左下に固定 */
+    #title-author {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      font-size: 12px;
+      text-align: left;
+      line-height: 1.2;
+      color: #333333;
+      margin: 16px;
+    }
+
+    #game-container {
+      max-width: 800px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center; /* 縦方向の中央揃え */
+      align-items: center; /* 横方向の中央揃え */
+    }
+
+    #kanji-sentence, #hiragana-sentence {
+      font-size: 24px;
+      line-height: 1.5;
+      text-align: center; /* 文章を真ん中寄せ */
+      padding: 4px;
+      border-radius: 8px;
+      min-height: 24px; /* 高さを確保 */
+      margin-bottom: 5px; /* 例文とひらがなの距離を近く */
+      width: 100%;
+    }
+
+    #hiragana-sentence {
+      font-size: 18px; /* ひらがなの文字サイズを小さく */
+      color: #555555; /* ひらがなを少し薄い色に設定（任意） */
+      margin-bottom: 5px; /* 例文とひらがなの距離を近く */
+      width: 100%;
+    }
+
+    #inputArea {
+      font-family: 'HannariMincho-Regular', sans-serif;
+      width: 100%;
+      max-width: 400px; /* 入力ボックスの最大幅を設定 */
+      font-size: 12px;
+      padding: 10px;
+      text-align: center;
+      border: none;
+      border-bottom: 0.5px solid #333;
+      background: none;
+      outline: none;
+      margin-top: 20px; /* 例文と入力欄の間に適度なスペースを追加 */
+      margin-bottom: 30px; /* 下部に余白を追加 */
+      cursor: pointer; /* クリック可能であることを示すカーソル */
+    }
+
+    #inputArea:focus {
+      border-bottom-color: #ffffff; /* フォーカス時のボーダーカラーを変更 */
+    }
+
+    .correct {
+      color: #d2d2d2; /* 入力済みのひらがなを灰色に設定 */
+      animation: blurOut 0.5s ease-out; /* ぼかすアニメーションを追加 */
+    }
+
+    /* ぼかすアニメーションの定義 */
+    @keyframes blurOut {
+      0% {
+        filter: blur(0px);
+        opacity: 1;
+      }
+      50% {
+        filter: blur(2px);
+        opacity: 0.7;
+      }
+      100% {
+        filter: blur(0px);
+        opacity: 1;
+      }
+    }
+
+    /* にじむアニメーションの定義 */
+    @keyframes fadeInBlur {
+      0% {
+        opacity: 0;
+        filter: blur(4px);
+      }
+      50% {
+        opacity: 0.5;
+        filter: blur(2px);
+      }
+      100% {
+        opacity: 1;
+        filter: blur(0px);
+      }
+    }
+
+    /* 例文にアニメーションを適用するクラス */
+    .fade-in-blur {
+      animation: fadeInBlur 0.5s ease-out;
+    }
+
+    #progress {
+      margin-top: 20px;
+      font-size: 12px;
+    }
+
+    /* タイム表示と共有ボタンのスタイル */
+    #result-container {
+      display: none; /* 初期状態では非表示 */
+      flex-direction: column;
+      align-items: center;
+      margin-top: 20px;
+    }
+
+    #time-taken {
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+
+    #share-button {
+      padding: 10px 20px;
+      font-size: 14px;
+      background-color: #1DA1F2; /* Twitterのブルー色 */
+      color: #ffffff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    #share-button:hover {
+      background-color: #0d95e8;
+    }
+
+    /* レスポンシブデザイン */
+    @media (max-width: 600px) {
+      #kanji-sentence, #hiragana-sentence {
+        font-size: 18px;
+        padding: 15px;
+      }
+      #hiragana-sentence {
+        font-size: 14px; /* モバイル表示時にさらに小さく */
+      }
+      #inputArea {
+        font-size: 18px;
+        padding: 8px;
+      }
+      #progress {
+        font-size: 16px;
+      }
+      #time-taken {
+        font-size: 18px;
+      }
+      #share-button {
+        font-size: 12px;
+        padding: 8px 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ストップウォッチ表示 -->
+  <div id="stopwatch">Time: 00:00.00</div>
+
+  <div id="game-container">
+    <div id="kanji-sentence">読み込み中...</div>
+    <div id="hiragana-sentence">ここにひらがなが表示されます。</div>
+    <input type="text" id="inputArea" placeholder="ここへ" autofocus>
+    <div id="progress"></div>
+  </div>
+  
+  <!-- 結果表示用コンテナ -->
+  <div id="result-container">
+    <div id="time-taken">Time: 00:00.00</div>
+    <a href="#" id="share-button" target="_blank">Twitterでシェア</a>
+  </div>
+
+  <div id="title-author">
+    雪<br>
+    底本：「三好達治全集第一巻」筑摩書房<br>
+    1964（昭和39）年10月15日発行<br><br>
+    三好 達治<br>
+    Miyoshi, Tatsuji<br>
+    1900/08/23-1964/04/05
+  </div>
+
+
+  <script>
+    // 漢字の文章とそのひらがな版の配列
+    const sentencesKanji = [
+      "十一月の夜をこめて 雪はふる 雪はふる",
+      "黄色なランプの灯の洩れる 私の窓にたづね寄る 雪の子供ら",
+      "小さな手が玻璃戸を敲く 玻璃戸を敲く 敲く さうしてそこに",
+      "息絶える 私は聴く 彼らの歌の 静謐 静謐 静謐",
+    ];
+
+    const sentencesHiragana = [
+      "じゅういちがつのよるをこめてゆきはふるゆきはふる",
+      "きいろならんぷのひのもれるわたしのまどにたづねよるゆきのこどもら",
+      "ちいさなてがはりとをたたくはりとをたたくたたくさうしてそこに",
+      "いきたえるわたしはきくかれらのうたのせいひつせいひつせいひつ",
+    ];
+
+    let currentSentenceKanji = "";
+    let currentSentenceHiragana = "";
+    let sentenceIndex = 0; // 初期値を0に設定
+    let sentenceCompleted = false; // 例文が完了したかを示すフラグ
+
+    const kanjiSentenceElement = document.getElementById('kanji-sentence');
+    const hiraganaSentenceElement = document.getElementById('hiragana-sentence');
+    const inputArea = document.getElementById('inputArea');
+    const progressElement = document.getElementById('progress');
+    const stopwatchElement = document.getElementById('stopwatch');
+    const resultContainer = document.getElementById('result-container');
+    const timeTakenElement = document.getElementById('time-taken');
+    const shareButton = document.getElementById('share-button');
+
+    // 複数のタイピング音ファイルを配列に格納
+    const typingSoundFiles = [
+      'type-sound01.mp3',
+      'type-sound02.mp3',
+      'type-sound03.mp3',
+      'type-sound04.mp3'
+    ];
+
+    // タイピング音をプリロードするためのAudioオブジェクトを作成
+    const typingAudios = typingSoundFiles.map(src => {
+      const audio = new Audio(src);
+      audio.volume = 0.2; // 音量を調整（0.0〜1.0の範囲で設定）
+      audio.preload = 'auto'; // 音声をプリロード
+      audio.addEventListener('canplaythrough', () => {
+        console.log(`Loaded ${src} with volume ${audio.volume}`);
+      });
+      audio.addEventListener('error', (e) => {
+        console.error(`Error loading ${src}:`, e);
+      });
+      return audio;
+    });
+
+    // ストップウォッチの変数
+    let startTime = null;
+    let timerInterval = null;
+    let timerStarted = false;
+
+    // 文章をロードする関数
+    function loadSentence() {
+      // 現在のsentenceIndexが配列の長さを超えている場合
+      if (sentenceIndex >= sentencesKanji.length) {
+        // ゲーム終了処理
+        endGame();
+        return;
+      }
+
+      currentSentenceKanji = sentencesKanji[sentenceIndex];
+      currentSentenceHiragana = sentencesHiragana[sentenceIndex];
+      console.log(`Loading Sentence ${sentenceIndex + 1}:`, currentSentenceKanji);
+
+      // 漢字の文章をspan要素でラップして表示
+      kanjiSentenceElement.innerHTML = "";
+      for (let char of currentSentenceKanji) {
+        const span = document.createElement('span');
+        span.textContent = char;
+        kanjiSentenceElement.appendChild(span);
+      }
+
+      // ひらがな版の文章をspan要素でラップして表示
+      hiraganaSentenceElement.innerHTML = "";
+      for (let char of currentSentenceHiragana) {
+        const span = document.createElement('span');
+        span.textContent = char;
+        hiraganaSentenceElement.appendChild(span);
+      }
+
+      // 例文にアニメーションクラスを適用
+      kanjiSentenceElement.classList.remove('fade-in-blur'); // クラスを一旦削除
+      void kanjiSentenceElement.offsetWidth; // 再フローを強制してアニメーションをリセット
+      kanjiSentenceElement.classList.add('fade-in-blur'); // クラスを再度追加してアニメーションを開始
+
+      sentenceCompleted = false; // フラグをリセット
+      inputArea.value = "";
+      inputArea.focus();
+      updateProgress();
+    }
+
+    // ゲーム終了時の処理
+    function endGame() {
+      // ストップウォッチを停止
+      clearInterval(timerInterval);
+      timerInterval = null;
+
+      // 結果表示コンテナを表示
+      resultContainer.style.display = 'flex';
+
+      // タイムの表示
+      const elapsedTime = getElapsedTime();
+      timeTakenElement.textContent = `Time: ${elapsedTime}`;
+
+      // Twitter（X）共有リンクの設定
+      const tweetText = encodeURIComponent(`Typing Time: ${elapsedTime}`);
+      const tweetUrl = encodeURIComponent(window.location.href);
+      const twitterLink = `https://twitter.com/intent/tweet?text=${tweetText}&url=${tweetUrl}`;
+      shareButton.href = twitterLink;
+
+      // 入力エリアを無効化
+      inputArea.disabled = true;
+    }
+
+    // 進行状況を更新する関数
+    function updateProgress() {
+      progressElement.textContent = ` ${sentenceIndex + 1} / ${sentencesKanji.length}`;
+      console.log(`Progress: ${sentenceIndex + 1} / ${sentencesKanji.length}`);
+    }
+
+    // サウンドを再生する関数（ランダムに選択して重ねて再生）
+    function playSound() {
+      // ランダムにタイピング音を選択
+      const randomIndex = Math.floor(Math.random() * typingAudios.length);
+      const sound = typingAudios[randomIndex].cloneNode(); // クローンを作成
+      sound.volume = 0.2; // クローンされたオーディオの音量を再設定
+      console.log(`Playing ${typingSoundFiles[randomIndex]} at volume ${sound.volume}`);
+      sound.play().catch((error) => {
+        // エラーが発生した場合は無視
+        console.error("音声再生エラー:", error);
+      });
+    }
+
+    // ストップウォッチの更新関数
+    function updateStopwatch() {
+      const elapsedTime = getElapsedTime();
+      stopwatchElement.textContent = `Time: ${elapsedTime}`;
+    }
+
+    // 経過時間を取得する関数
+    function getElapsedTime() {
+      const now = new Date();
+      const diff = now - startTime; // ミリ秒単位
+      const seconds = (diff / 1000) % 60;
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+
+      // 時間が0の場合は表示しない
+      let timeString = "";
+      if (hours > 0) {
+        timeString += `${String(hours).padStart(2, '0')}:`;
+      }
+      timeString += `${String(minutes).padStart(2, '0')}:${seconds.toFixed(2).padStart(5, '0')}`;
+      return timeString;
+    }
+
+    // 入力イベントの処理
+    inputArea.addEventListener('input', () => {
+      // ストップウォッチの開始
+      if (!timerStarted) {
+        startStopwatch();
+      }
+
+      const inputText = inputArea.value;
+      const hiraganaSpans = hiraganaSentenceElement.querySelectorAll('span');
+
+      playSound(); // タイピング音を再生
+
+      // 入力とひらがな版の文章を比較
+      hiraganaSpans.forEach((span, index) => {
+        const expectedChar = currentSentenceHiragana[index];
+        const typedChar = inputText[index];
+
+        if (typedChar === expectedChar) {
+          span.classList.add('correct');
+        } else {
+          span.classList.remove('correct');
+        }
+      });
+
+      // 全て正しく入力された場合
+      const isComplete = inputText.length === currentSentenceHiragana.length &&
+                         Array.from(hiraganaSpans).every(span => span.classList.contains('correct'));
+
+      // sentenceCompleted フラグが false の場合のみ処理を実行
+      if (isComplete && !sentenceCompleted) {
+        console.log(`Sentence ${sentenceIndex + 1} completed.`);
+        sentenceCompleted = true; // フラグをセット
+        sentenceIndex++;
+        setTimeout(() => {
+          loadSentence();
+        }, 500); // 次の文章を少し遅れてロード
+
+        // 最後の文章が完了した場合、ゲーム終了処理を呼び出す
+        if (sentenceIndex === sentencesKanji.length) {
+          setTimeout(() => {
+            endGame();
+          }, 500);
+        }
+      }
+    });
+
+    // ストップウォッチの開始関数
+    function startStopwatch() {
+      timerStarted = true;
+      startTime = new Date();
+      timerInterval = setInterval(updateStopwatch, 100);
+      console.log("Stopwatch started.");
+    }
+
+    // ページが完全に読み込まれた後に初期化
+    window.addEventListener('DOMContentLoaded', (event) => {
+      loadSentence();
+    });
+  </script>
+
+</body>
+</html>
